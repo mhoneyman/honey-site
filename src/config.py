@@ -84,6 +84,14 @@ BENCHMARKS = {
 # Default benchmark
 DEFAULT_BENCHMARK = "mast"
 
+# Benchmark colors for frontier chart
+BENCHMARK_COLORS = {
+    'MAST': '#10A37F',        # Teal
+    'HealthBench': '#D97706',  # Orange
+    'MedQA': '#4285F4',        # Blue
+    'MedHELM': '#6366F1'       # Purple
+}
+
 # Chart styling (shared across all benchmarks)
 CHART_CONFIG = {
     "x_axis_title": "Model Release Date",

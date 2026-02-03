@@ -16,8 +16,8 @@ import pandas as pd
 
 from src.config import BENCHMARKS, FILTER_CONFIG
 from src.fetch_data import fetch_mast_metrics, load_release_dates, load_benchmark_data
-from src.process_data import filter_mast_metrics, merge_with_dates
-from src.visualize import create_benchmark_chart, create_tabbed_benchmark_page, save_chart
+from src.process_data import filter_mast_metrics, merge_with_dates, calculate_frontier
+from src.visualize import create_benchmark_chart, create_tabbed_benchmark_page, save_chart, create_frontier_chart
 
 
 def load_mast_data(data_dir: Path) -> pd.DataFrame:
@@ -123,6 +123,23 @@ def main():
         config = BENCHMARKS[bid]
         print(f"  {config['name']:15} {len(df):3} models  Source: {config['source_name']}")
 
+    # Calculate frontiers for each benchmark
+    print("\n" + "-" * 70)
+    print("Calculating benchmark frontiers...")
+    frontier_data = {}
+    for bid, df in benchmark_data.items():
+        if len(df) > 0:
+            benchmark_name = BENCHMARKS[bid]['name']
+            frontier_df = calculate_frontier(df, benchmark_name)
+            frontier_data[bid] = frontier_df
+            print(f"  {benchmark_name:15} {len(frontier_df):2} frontier points")
+
+    # Generate frontier chart
+    if frontier_data:
+        print("\nGenerating frontier chart...")
+        frontier_fig = create_frontier_chart(frontier_data)
+        save_chart(frontier_fig, output_dir, 'healthcare_benchmark_frontier')
+
     # Generate tabbed chart
     print("\n" + "-" * 70)
     print("Generating tabbed benchmark chart...")
@@ -137,6 +154,8 @@ def main():
 
     print("\n" + "=" * 70)
     print("Done! Output files:")
+    print(f"  - {output_dir / 'healthcare_benchmark_frontier.html'} (FRONTIER CHART)")
+    print(f"  - {output_dir / 'healthcare_benchmark_frontier.png'}")
     print(f"  - {output_dir / 'healthcare_ai_benchmarks.html'} (tabbed view)")
     for bid in benchmark_data.keys():
         print(f"  - {output_dir / f'{bid}_benchmark_chart.html'}")

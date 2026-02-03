@@ -9,6 +9,7 @@ Interactive visualizations of multiple healthcare AI benchmarks, including:
 
 ## Features
 
+- **Frontier Chart**: Multi-line visualization showing state-of-the-art progression across all four benchmarks
 - Fetches live data from MAST leaderboard
 - Loads curated benchmark results from other sources
 - Generates interactive Plotly charts with model performance over time
@@ -35,6 +36,8 @@ This will:
 
 ## Output
 
+- **`healthcare_benchmark_frontier.html`** - **Frontier chart** showing state-of-the-art progression
+- **`healthcare_benchmark_frontier.png`** - Static frontier chart image
 - `healthcare_ai_benchmarks.html` - Tabbed view of all benchmarks
 - Individual benchmark charts as HTML and PNG files
 

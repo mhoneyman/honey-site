@@ -86,3 +86,49 @@ def prepare_chart_data(metrics_df: pd.DataFrame, dates_df: pd.DataFrame) -> pd.D
         merged['score_upper'] = merged['score'] + merged['ci_width']
 
     return merged
+
+
+def calculate_frontier(df: pd.DataFrame, benchmark_name: str) -> pd.DataFrame:
+    """
+    Calculate the frontier (state-of-the-art progression) for a benchmark.
+
+    Returns only the points where new records were set (cumulative maximum increases).
+
+    Args:
+        df: DataFrame with 'release_date', 'score', and 'model' columns
+        benchmark_name: Name of the benchmark for the 'benchmark' column
+
+    Returns:
+        DataFrame with frontier points only (date, score, model, benchmark)
+    """
+    if len(df) == 0:
+        return pd.DataFrame(columns=['release_date', 'score', 'model', 'benchmark', 'score_pct'])
+
+    # Ensure release_date is datetime
+    df = df.copy()
+    df['release_date'] = pd.to_datetime(df['release_date'])
+
+    # Sort by release date
+    df = df.sort_values('release_date')
+
+    # Calculate cumulative maximum
+    df['cummax_score'] = df['score'].cummax()
+
+    # Keep only points where score equals cummax (new records)
+    # Also keep first point even if not the highest
+    frontier_mask = (df['score'] == df['cummax_score']) | (df.index == df.index[0])
+    frontier_df = df[frontier_mask].copy()
+
+    # Remove consecutive duplicates (same score)
+    frontier_df = frontier_df[frontier_df['cummax_score'].diff() != 0]
+
+    # Convert to percentage scale
+    frontier_df['score_pct'] = frontier_df['score'] * 100
+
+    # Add benchmark name
+    frontier_df['benchmark'] = benchmark_name
+
+    # Select relevant columns
+    result = frontier_df[['release_date', 'score', 'score_pct', 'model', 'benchmark']].copy()
+
+    return result

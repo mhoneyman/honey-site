@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import pandas as pd
 from pathlib import Path
 
-from .config import PROVIDER_COLORS, CHART_CONFIG, TOP_MODELS_TO_ANNOTATE, HP_THEME, BENCHMARKS
+from .config import PROVIDER_COLORS, CHART_CONFIG, TOP_MODELS_TO_ANNOTATE, HP_THEME, BENCHMARKS, BENCHMARK_COLORS
 
 
 def create_benchmark_chart(df: pd.DataFrame, benchmark_id: str) -> go.Figure:
@@ -440,6 +440,100 @@ def create_tabbed_benchmark_page(benchmark_data: dict, output_dir: Path):
     print(f"Saved embeddable chart to {embed_path}")
 
     return output_path
+
+
+def create_frontier_chart(frontier_data: dict) -> go.Figure:
+    """
+    Create frontier chart showing state-of-the-art progression across benchmarks.
+
+    Args:
+        frontier_data: Dictionary mapping benchmark_id to frontier DataFrame
+
+    Returns:
+        Plotly Figure with multi-line frontier chart
+    """
+    fig = go.Figure()
+
+    # Add a line for each benchmark
+    for benchmark_id, df in frontier_data.items():
+        if len(df) == 0:
+            continue
+
+        benchmark_name = BENCHMARKS[benchmark_id]['name']
+        color = BENCHMARK_COLORS[benchmark_name]
+
+        # Add step line with markers
+        fig.add_trace(go.Scatter(
+            x=df['release_date'],
+            y=df['score_pct'],
+            mode='lines+markers+text',
+            name=benchmark_name,
+            line=dict(color=color, width=3, shape='hv'),  # Step chart: horizontal then vertical
+            marker=dict(
+                size=10,
+                color=color,
+                line=dict(width=2, color='white')
+            ),
+            text=df['model'],
+            textposition='top center',
+            textfont=dict(size=9, color=color),
+            hovertemplate=(
+                '<b>%{text}</b><br>' +
+                f'{benchmark_name}: %{{y:.1f}}%<br>' +
+                'Released: %{x|%b %d, %Y}<br>' +
+                '<extra></extra>'
+            ),
+        ))
+
+    # Update layout
+    fig.update_layout(
+        title=dict(
+            text='Healthcare AI Benchmark Frontiers',
+            font=dict(size=20, color='#1f2937'),
+            x=0.5,
+            xanchor='center',
+        ),
+        xaxis=dict(
+            title='Release Date',
+            showgrid=True,
+            gridcolor='#e5e7eb',
+            gridwidth=1,
+            tickformat='%b %Y',
+            dtick='M3',
+            linecolor='#d1d5db',
+        ),
+        yaxis=dict(
+            title='Score (%)',
+            showgrid=True,
+            gridcolor='#e5e7eb',
+            gridwidth=1,
+            range=[0, 100],
+            ticksuffix='%',
+            linecolor='#d1d5db',
+        ),
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font=dict(
+            family='-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            size=12,
+            color='#374151',
+        ),
+        legend=dict(
+            orientation='v',
+            yanchor='middle',
+            y=0.5,
+            xanchor='left',
+            x=1.02,
+            bgcolor='rgba(255, 255, 255, 0.9)',
+            bordercolor='#d1d5db',
+            borderwidth=1,
+            font=dict(size=12),
+        ),
+        margin=dict(l=60, r=150, t=80, b=60),
+        hovermode='closest',
+    )
+
+    return fig
 
 
 def save_chart(fig: go.Figure, output_dir: Path, base_name: str = 'mast_benchmark_chart'):
