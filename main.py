@@ -134,32 +134,53 @@ def main():
             frontier_data[bid] = frontier_df
             print(f"  {benchmark_name:15} {len(frontier_df):2} frontier points")
 
-    # Generate frontier chart
+    # Generate frontier charts (both themes)
     if frontier_data:
-        print("\nGenerating frontier chart...")
-        frontier_fig = create_frontier_chart(frontier_data)
-        save_chart(frontier_fig, output_dir, 'healthcare_benchmark_frontier')
+        print("\nGenerating frontier charts...")
+        print("  - White background version...")
+        frontier_fig_white = create_frontier_chart(frontier_data, use_dark_theme=False)
+        save_chart(frontier_fig_white, output_dir, 'healthcare_benchmark_frontier_white')
 
-    # Generate tabbed chart
+        print("  - Dark background version...")
+        frontier_fig_dark = create_frontier_chart(frontier_data, use_dark_theme=True)
+        save_chart(frontier_fig_dark, output_dir, 'healthcare_benchmark_frontier_dark')
+
+    # Generate tabbed chart (dark theme)
     print("\n" + "-" * 70)
     print("Generating tabbed benchmark chart...")
     create_tabbed_benchmark_page(benchmark_data, output_dir)
 
-    # Also generate individual charts for each benchmark
+    # Generate individual charts for each benchmark (both themes)
     print("\nGenerating individual benchmark charts...")
     for bid, df in benchmark_data.items():
         if len(df) > 0:
-            fig = create_benchmark_chart(df, bid)
-            save_chart(fig, output_dir, f'{bid}_benchmark_chart')
+            print(f"  {BENCHMARKS[bid]['name']}:")
+
+            # White background version
+            print(f"    - White background...")
+            fig_white = create_benchmark_chart(df, bid, use_dark_theme=False)
+            save_chart(fig_white, output_dir, f'{bid}_benchmark_chart_white')
+
+            # Dark background version
+            print(f"    - Dark background...")
+            fig_dark = create_benchmark_chart(df, bid, use_dark_theme=True)
+            save_chart(fig_dark, output_dir, f'{bid}_benchmark_chart_dark')
 
     print("\n" + "=" * 70)
-    print("Done! Output files:")
-    print(f"  - {output_dir / 'healthcare_benchmark_frontier.html'} (FRONTIER CHART)")
-    print(f"  - {output_dir / 'healthcare_benchmark_frontier.png'}")
+    print("Done! Output files (white background):")
+    print(f"  - {output_dir / 'healthcare_benchmark_frontier_white.html'}")
+    print(f"  - {output_dir / 'healthcare_benchmark_frontier_white.png'}")
+    for bid in benchmark_data.keys():
+        print(f"  - {output_dir / f'{bid}_benchmark_chart_white.html'}")
+        print(f"  - {output_dir / f'{bid}_benchmark_chart_white.png'}")
+
+    print("\nOutput files (dark background):")
+    print(f"  - {output_dir / 'healthcare_benchmark_frontier_dark.html'}")
+    print(f"  - {output_dir / 'healthcare_benchmark_frontier_dark.png'}")
     print(f"  - {output_dir / 'healthcare_ai_benchmarks.html'} (tabbed view)")
     for bid in benchmark_data.keys():
-        print(f"  - {output_dir / f'{bid}_benchmark_chart.html'}")
-        print(f"  - {output_dir / f'{bid}_benchmark_chart.png'}")
+        print(f"  - {output_dir / f'{bid}_benchmark_chart_dark.html'}")
+        print(f"  - {output_dir / f'{bid}_benchmark_chart_dark.png'}")
     print("=" * 70)
 
 

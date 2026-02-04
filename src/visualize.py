@@ -10,19 +10,37 @@ from pathlib import Path
 from .config import PROVIDER_COLORS, CHART_CONFIG, TOP_MODELS_TO_ANNOTATE, HP_THEME, BENCHMARKS, BENCHMARK_COLORS
 
 
-def create_benchmark_chart(df: pd.DataFrame, benchmark_id: str) -> go.Figure:
+def create_benchmark_chart(df: pd.DataFrame, benchmark_id: str, use_dark_theme: bool = True) -> go.Figure:
     """
     Create interactive scatter chart for a specific benchmark.
-    Styled to match Health in Progress Substack theme.
 
     Args:
         df: Prepared chart data with scores, dates, providers
         benchmark_id: ID of the benchmark being visualized
+        use_dark_theme: If True, use HP_THEME dark colors; if False, use white background
 
     Returns:
         Plotly Figure object
     """
     benchmark = BENCHMARKS[benchmark_id]
+
+    # Set theme colors
+    if use_dark_theme:
+        bg_color = HP_THEME['bg_primary']
+        bg_secondary = HP_THEME['bg_secondary']
+        grid_color = HP_THEME['grid']
+        text_color = HP_THEME['text_primary']
+        text_secondary = HP_THEME['text_secondary']
+        accent_color = HP_THEME['accent']
+        marker_line_color = HP_THEME['bg_primary']
+    else:
+        bg_color = 'white'
+        bg_secondary = 'rgba(255, 255, 255, 0.9)'
+        grid_color = '#e5e7eb'
+        text_color = '#1f2937'
+        text_secondary = '#6b7280'
+        accent_color = '#f59e0b'  # Amber for trendline
+        marker_line_color = 'white'
 
     # Create base scatter plot
     fig = px.scatter(
@@ -40,13 +58,13 @@ def create_benchmark_chart(df: pd.DataFrame, benchmark_id: str) -> go.Figure:
         title=benchmark['title'],
     )
 
-    # Update marker styling for dark theme
+    # Update marker styling
     fig.update_traces(
         marker=dict(
             size=CHART_CONFIG['marker_size'],
             line=dict(
                 width=CHART_CONFIG['marker_line_width'],
-                color=HP_THEME['bg_primary']
+                color=marker_line_color
             )
         )
     )
@@ -99,7 +117,7 @@ def create_benchmark_chart(df: pd.DataFrame, benchmark_id: str) -> go.Figure:
             mode='lines',
             name='Trendline',
             line=dict(
-                color=HP_THEME['accent'],
+                color=accent_color,
                 width=2.5,
                 dash='dash',
             ),
@@ -117,61 +135,61 @@ def create_benchmark_chart(df: pd.DataFrame, benchmark_id: str) -> go.Figure:
             arrowhead=0,
             arrowsize=0.5,
             arrowwidth=1,
-            arrowcolor=HP_THEME['text_secondary'],
+            arrowcolor=text_secondary,
             ax=0,
             ay=-35,
             font=dict(
                 size=CHART_CONFIG['annotation_font_size'],
-                color=HP_THEME['text_primary'],
+                color=text_color,
             ),
-            bgcolor=HP_THEME['bg_secondary'],
+            bgcolor=bg_secondary,
             borderpad=3,
-            bordercolor=HP_THEME['grid'],
+            bordercolor=grid_color,
             borderwidth=1,
         )
 
-    # Apply Health in Progress dark theme
+    # Apply theme
     fig.update_layout(
-        plot_bgcolor=HP_THEME['bg_primary'],
-        paper_bgcolor=HP_THEME['bg_primary'],
+        plot_bgcolor=bg_color,
+        paper_bgcolor=bg_color,
         font=dict(
             family='-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             size=12,
-            color=HP_THEME['text_primary'],
+            color=text_color,
         ),
         title=dict(
             text=benchmark['title'],
-            font=dict(size=18, color=HP_THEME['text_primary']),
+            font=dict(size=18, color=text_color),
             x=0.5,
             xanchor='center',
         ),
         xaxis=dict(
             title=dict(
                 text=CHART_CONFIG['x_axis_title'],
-                font=dict(color=HP_THEME['text_secondary']),
+                font=dict(color=text_secondary),
             ),
             showgrid=True,
-            gridcolor=HP_THEME['grid'],
+            gridcolor=grid_color,
             gridwidth=1,
             tickformat='%b %Y',
             dtick='M2',
-            tickfont=dict(color=HP_THEME['text_secondary']),
-            linecolor=HP_THEME['grid'],
-            zerolinecolor=HP_THEME['grid'],
+            tickfont=dict(color=text_secondary),
+            linecolor=grid_color,
+            zerolinecolor=grid_color,
         ),
         yaxis=dict(
             title=dict(
                 text=benchmark['y_axis_title'],
-                font=dict(color=HP_THEME['text_secondary']),
+                font=dict(color=text_secondary),
             ),
             showgrid=True,
-            gridcolor=HP_THEME['grid'],
+            gridcolor=grid_color,
             gridwidth=1,
             range=benchmark['y_axis_range'],
             tickformat='.2f',
-            tickfont=dict(color=HP_THEME['text_secondary']),
-            linecolor=HP_THEME['grid'],
-            zerolinecolor=HP_THEME['grid'],
+            tickfont=dict(color=text_secondary),
+            linecolor=grid_color,
+            zerolinecolor=grid_color,
         ),
         legend=dict(
             orientation='h',
@@ -179,18 +197,18 @@ def create_benchmark_chart(df: pd.DataFrame, benchmark_id: str) -> go.Figure:
             y=1.02,
             xanchor='center',
             x=0.5,
-            bgcolor=HP_THEME['bg_secondary'],
-            bordercolor=HP_THEME['grid'],
+            bgcolor=bg_secondary,
+            bordercolor=grid_color,
             borderwidth=1,
-            font=dict(color=HP_THEME['text_primary'], size=11),
+            font=dict(color=text_color, size=11),
         ),
         margin=dict(l=60, r=40, t=100, b=60),
         hoverlabel=dict(
-            bgcolor=HP_THEME['bg_secondary'],
+            bgcolor=bg_secondary,
             font_size=12,
             font_family='-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            font_color=HP_THEME['text_primary'],
-            bordercolor=HP_THEME['accent'],
+            font_color=text_color,
+            bordercolor=accent_color,
         ),
     )
 
@@ -442,17 +460,36 @@ def create_tabbed_benchmark_page(benchmark_data: dict, output_dir: Path):
     return output_path
 
 
-def create_frontier_chart(frontier_data: dict) -> go.Figure:
+def create_frontier_chart(frontier_data: dict, use_dark_theme: bool = False) -> go.Figure:
     """
     Create frontier chart showing state-of-the-art progression across benchmarks.
 
     Args:
         frontier_data: Dictionary mapping benchmark_id to frontier DataFrame
+        use_dark_theme: If True, use HP_THEME dark colors; if False, use white background
 
     Returns:
         Plotly Figure with multi-line frontier chart
     """
     fig = go.Figure()
+
+    # Set theme colors
+    if use_dark_theme:
+        bg_color = HP_THEME['bg_primary']
+        grid_color = HP_THEME['grid']
+        text_color = HP_THEME['text_primary']
+        text_secondary = HP_THEME['text_secondary']
+        marker_line_color = HP_THEME['bg_primary']
+        legend_bg = HP_THEME['bg_secondary']
+        legend_border = HP_THEME['grid']
+    else:
+        bg_color = 'white'
+        grid_color = '#e5e7eb'
+        text_color = '#1f2937'
+        text_secondary = '#6b7280'
+        marker_line_color = 'white'
+        legend_bg = 'rgba(255, 255, 255, 0.9)'
+        legend_border = '#d1d5db'
 
     # Add a line for each benchmark
     for benchmark_id, df in frontier_data.items():
@@ -472,7 +509,7 @@ def create_frontier_chart(frontier_data: dict) -> go.Figure:
             marker=dict(
                 size=10,
                 color=color,
-                line=dict(width=2, color='white')
+                line=dict(width=2, color=marker_line_color)
             ),
             text=df['model'],
             textposition='top center',
@@ -489,34 +526,42 @@ def create_frontier_chart(frontier_data: dict) -> go.Figure:
     fig.update_layout(
         title=dict(
             text='Healthcare AI Benchmark Frontiers',
-            font=dict(size=20, color='#1f2937'),
+            font=dict(size=20, color=text_color),
             x=0.5,
             xanchor='center',
         ),
         xaxis=dict(
-            title='Release Date',
+            title=dict(
+                text='Release Date',
+                font=dict(color=text_secondary),
+            ),
             showgrid=True,
-            gridcolor='#e5e7eb',
+            gridcolor=grid_color,
             gridwidth=1,
             tickformat='%b %Y',
             dtick='M3',
-            linecolor='#d1d5db',
+            linecolor=grid_color,
+            tickfont=dict(color=text_secondary),
         ),
         yaxis=dict(
-            title='Score (%)',
+            title=dict(
+                text='Score (%)',
+                font=dict(color=text_secondary),
+            ),
             showgrid=True,
-            gridcolor='#e5e7eb',
+            gridcolor=grid_color,
             gridwidth=1,
             range=[0, 100],
             ticksuffix='%',
-            linecolor='#d1d5db',
+            linecolor=grid_color,
+            tickfont=dict(color=text_secondary),
         ),
-        plot_bgcolor='white',
-        paper_bgcolor='white',
+        plot_bgcolor=bg_color,
+        paper_bgcolor=bg_color,
         font=dict(
             family='-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             size=12,
-            color='#374151',
+            color=text_color,
         ),
         legend=dict(
             orientation='v',
@@ -524,10 +569,10 @@ def create_frontier_chart(frontier_data: dict) -> go.Figure:
             y=0.5,
             xanchor='left',
             x=1.02,
-            bgcolor='rgba(255, 255, 255, 0.9)',
-            bordercolor='#d1d5db',
+            bgcolor=legend_bg,
+            bordercolor=legend_border,
             borderwidth=1,
-            font=dict(size=12),
+            font=dict(size=12, color=text_color),
         ),
         margin=dict(l=60, r=150, t=80, b=60),
         hovermode='closest',
