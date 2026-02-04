@@ -139,16 +139,19 @@ def main():
         print("\nGenerating frontier charts...")
         print("  - White background version...")
         frontier_fig_white = create_frontier_chart(frontier_data, use_dark_theme=False)
-        save_chart(frontier_fig_white, output_dir, 'healthcare_benchmark_frontier_white')
+        save_chart(frontier_fig_white, output_dir, 'healthcare_benchmark_frontier_white', enable_click_toggle=True)
 
         print("  - Dark background version...")
         frontier_fig_dark = create_frontier_chart(frontier_data, use_dark_theme=True)
-        save_chart(frontier_fig_dark, output_dir, 'healthcare_benchmark_frontier_dark')
+        save_chart(frontier_fig_dark, output_dir, 'healthcare_benchmark_frontier_dark', enable_click_toggle=True)
 
-    # Generate tabbed chart (dark theme)
+    # Generate tabbed charts (both themes)
     print("\n" + "-" * 70)
-    print("Generating tabbed benchmark chart...")
-    create_tabbed_benchmark_page(benchmark_data, output_dir)
+    print("Generating tabbed benchmark charts...")
+    print("  - White background version...")
+    create_tabbed_benchmark_page(benchmark_data, output_dir, use_dark_theme=False)
+    print("  - Dark background version...")
+    create_tabbed_benchmark_page(benchmark_data, output_dir, use_dark_theme=True)
 
     # Generate individual charts for each benchmark (both themes)
     print("\nGenerating individual benchmark charts...")
@@ -170,6 +173,7 @@ def main():
     print("Done! Output files (white background):")
     print(f"  - {output_dir / 'healthcare_benchmark_frontier_white.html'}")
     print(f"  - {output_dir / 'healthcare_benchmark_frontier_white.png'}")
+    print(f"  - {output_dir / 'healthcare_ai_benchmarks_white.html'} (tabbed view)")
     for bid in benchmark_data.keys():
         print(f"  - {output_dir / f'{bid}_benchmark_chart_white.html'}")
         print(f"  - {output_dir / f'{bid}_benchmark_chart_white.png'}")
@@ -177,7 +181,7 @@ def main():
     print("\nOutput files (dark background):")
     print(f"  - {output_dir / 'healthcare_benchmark_frontier_dark.html'}")
     print(f"  - {output_dir / 'healthcare_benchmark_frontier_dark.png'}")
-    print(f"  - {output_dir / 'healthcare_ai_benchmarks.html'} (tabbed view)")
+    print(f"  - {output_dir / 'healthcare_ai_benchmarks_dark.html'} (tabbed view)")
     for bid in benchmark_data.keys():
         print(f"  - {output_dir / f'{bid}_benchmark_chart_dark.html'}")
         print(f"  - {output_dir / f'{bid}_benchmark_chart_dark.png'}")

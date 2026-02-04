@@ -267,13 +267,14 @@ def _decode_binary_data(obj):
         return obj
 
 
-def create_tabbed_benchmark_page(benchmark_data: dict, output_dir: Path):
+def create_tabbed_benchmark_page(benchmark_data: dict, output_dir: Path, use_dark_theme: bool = True):
     """
     Create a single HTML page with tabs for each benchmark.
 
     Args:
         benchmark_data: Dictionary mapping benchmark_id to DataFrame
         output_dir: Directory to save output files
+        use_dark_theme: If True, use HP_THEME dark colors; if False, use white background
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -281,11 +282,27 @@ def create_tabbed_benchmark_page(benchmark_data: dict, output_dir: Path):
     figures_json = {}
     for benchmark_id, df in benchmark_data.items():
         if len(df) > 0:
-            fig = create_benchmark_chart(df, benchmark_id)
+            fig = create_benchmark_chart(df, benchmark_id, use_dark_theme=use_dark_theme)
             # Get figure dict and decode any binary-encoded arrays
             fig_dict = fig.to_plotly_json()
             decoded = _decode_binary_data(fig_dict)
             figures_json[benchmark_id] = json.dumps(decoded)
+
+    # Set theme colors
+    if use_dark_theme:
+        bg_primary = HP_THEME['bg_primary']
+        bg_secondary = HP_THEME['bg_secondary']
+        text_primary = HP_THEME['text_primary']
+        text_secondary = HP_THEME['text_secondary']
+        grid_color = HP_THEME['grid']
+        accent_color = HP_THEME['accent']
+    else:
+        bg_primary = 'white'
+        bg_secondary = '#f9fafb'
+        text_primary = '#1f2937'
+        text_secondary = '#6b7280'
+        grid_color = '#e5e7eb'
+        accent_color = '#f59e0b'
 
     # Build attribution HTML
     attributions = []
@@ -311,9 +328,9 @@ def create_tabbed_benchmark_page(benchmark_data: dict, output_dir: Path):
         html, body {{
             width: 100%;
             height: 100%;
-            background: {HP_THEME['bg_primary']};
+            background: {bg_primary};
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            color: {HP_THEME['text_primary']};
+            color: {text_primary};
         }}
         .container {{
             display: flex;
@@ -326,40 +343,42 @@ def create_tabbed_benchmark_page(benchmark_data: dict, output_dir: Path):
         #chart {{
             flex: 1;
             min-height: 0;
+            margin-bottom: 8px;
         }}
         .tabs {{
             display: flex;
             gap: 8px;
-            padding: 16px 0;
+            padding: 20px 0 16px 0;
             flex-wrap: wrap;
             justify-content: center;
+            flex-shrink: 0;
         }}
         .tab {{
             padding: 10px 20px;
-            background: {HP_THEME['bg_secondary']};
-            border: 1px solid {HP_THEME['grid']};
+            background: {bg_secondary};
+            border: 1px solid {grid_color};
             border-radius: 6px;
             cursor: pointer;
-            color: {HP_THEME['text_secondary']};
+            color: {text_secondary};
             font-size: 14px;
             font-weight: 500;
             transition: all 0.2s ease;
         }}
         .tab:hover {{
-            background: {HP_THEME['grid']};
-            color: {HP_THEME['text_primary']};
+            background: {grid_color};
+            color: {text_primary};
         }}
         .tab.active {{
-            background: {HP_THEME['accent']};
-            border-color: {HP_THEME['accent']};
-            color: {HP_THEME['bg_primary']};
+            background: {accent_color};
+            border-color: {accent_color};
+            color: {bg_primary};
         }}
         .attributions {{
             padding: 12px 0;
             text-align: center;
             font-size: 12px;
-            color: {HP_THEME['text_secondary']};
-            border-top: 1px solid {HP_THEME['grid']};
+            color: {text_secondary};
+            border-top: 1px solid {grid_color};
         }}
         .attribution {{
             display: none;
@@ -368,7 +387,7 @@ def create_tabbed_benchmark_page(benchmark_data: dict, output_dir: Path):
             display: block;
         }}
         .attribution a {{
-            color: {HP_THEME['accent']};
+            color: {accent_color};
             text-decoration: none;
         }}
         .attribution a:hover {{
@@ -378,10 +397,10 @@ def create_tabbed_benchmark_page(benchmark_data: dict, output_dir: Path):
             padding: 12px 0;
             text-align: center;
             font-size: 11px;
-            color: {HP_THEME['text_secondary']};
+            color: {text_secondary};
         }}
         .footer a {{
-            color: {HP_THEME['accent']};
+            color: {accent_color};
             text-decoration: none;
         }}
     </style>
@@ -446,13 +465,14 @@ def create_tabbed_benchmark_page(benchmark_data: dict, output_dir: Path):
 </html>'''
 
     # Save the tabbed HTML
-    output_path = output_dir / 'healthcare_ai_benchmarks.html'
+    theme_suffix = '_dark' if use_dark_theme else '_white'
+    output_path = output_dir / f'healthcare_ai_benchmarks{theme_suffix}.html'
     with open(output_path, 'w') as f:
         f.write(html_content)
     print(f"Saved tabbed benchmark chart to {output_path}")
 
     # Also save embeddable version
-    embed_path = output_dir / 'healthcare_ai_benchmarks_embed.html'
+    embed_path = output_dir / f'healthcare_ai_benchmarks{theme_suffix}_embed.html'
     with open(embed_path, 'w') as f:
         f.write(html_content)
     print(f"Saved embeddable chart to {embed_path}")
@@ -499,7 +519,28 @@ def create_frontier_chart(frontier_data: dict, use_dark_theme: bool = False) -> 
         benchmark_name = BENCHMARKS[benchmark_id]['name']
         color = BENCHMARK_COLORS[benchmark_name]
 
-        # Add step line with markers
+        # Determine which points to label (first of each model family)
+        # Extract base model names by removing suffixes like "mini", "preview", "pro", etc.
+        model_families_seen = set()
+        show_text = []
+
+        for model_name in df['model']:
+            # Extract base family name (e.g., "GPT-4o" from "GPT-4o mini")
+            base_name = model_name.split()[0]  # Take first word
+
+            # For models like "Claude 3.5 Sonnet", keep first two words if numeric
+            parts = model_name.split()
+            if len(parts) > 1 and any(char.isdigit() for char in parts[1]):
+                base_name = f"{parts[0]} {parts[1]}"
+
+            # Show label only for first occurrence of each family
+            if base_name not in model_families_seen:
+                show_text.append(model_name)
+                model_families_seen.add(base_name)
+            else:
+                show_text.append('')  # Empty string = no label
+
+        # Add step line with markers and selective text
         fig.add_trace(go.Scatter(
             x=df['release_date'],
             y=df['score_pct'],
@@ -511,11 +552,12 @@ def create_frontier_chart(frontier_data: dict, use_dark_theme: bool = False) -> 
                 color=color,
                 line=dict(width=2, color=marker_line_color)
             ),
-            text=df['model'],
+            text=show_text,
             textposition='top center',
             textfont=dict(size=9, color=color),
+            customdata=df['model'],  # Store full model name for hover and click
             hovertemplate=(
-                '<b>%{text}</b><br>' +
+                '<b>%{customdata}</b><br>' +
                 f'{benchmark_name}: %{{y:.1f}}%<br>' +
                 'Released: %{x|%b %d, %Y}<br>' +
                 '<extra></extra>'
@@ -581,7 +623,7 @@ def create_frontier_chart(frontier_data: dict, use_dark_theme: bool = False) -> 
     return fig
 
 
-def save_chart(fig: go.Figure, output_dir: Path, base_name: str = 'mast_benchmark_chart'):
+def save_chart(fig: go.Figure, output_dir: Path, base_name: str = 'mast_benchmark_chart', enable_click_toggle: bool = False):
     """
     Save chart as HTML (interactive, embeddable) and PNG (static).
 
@@ -589,21 +631,79 @@ def save_chart(fig: go.Figure, output_dir: Path, base_name: str = 'mast_benchmar
         fig: Plotly Figure object
         output_dir: Directory to save outputs
         base_name: Base filename without extension
+        enable_click_toggle: If True, add JavaScript to toggle labels on click (for frontier charts)
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Save interactive HTML (full page version)
     html_path = output_dir / f'{base_name}.html'
-    fig.write_html(
-        html_path,
-        include_plotlyjs='cdn',
-        full_html=True,
-        config={
-            'displayModeBar': True,
-            'displaylogo': False,
-            'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
-        }
-    )
+
+    if enable_click_toggle:
+        # Save with custom HTML including click-to-toggle functionality
+        html_string = fig.to_html(
+            include_plotlyjs='cdn',
+            full_html=True,
+            config={
+                'displayModeBar': True,
+                'displaylogo': False,
+                'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
+            }
+        )
+
+        # Add JavaScript for click-to-toggle labels
+        toggle_script = """
+        <script>
+        // Wait for Plotly to be loaded
+        setTimeout(function() {
+            var plotDiv = document.querySelector('.plotly-graph-div');
+
+            if (plotDiv) {
+                plotDiv.on('plotly_click', function(data) {
+                    var point = data.points[0];
+                    var traceIndex = point.curveNumber;
+                    var pointIndex = point.pointIndex;
+
+                    // Get current figure data
+                    var currentText = plotDiv.data[traceIndex].text;
+                    if (!currentText) return;
+
+                    // Create new text array
+                    var newText = Array.isArray(currentText) ? [...currentText] : [currentText];
+
+                    // Toggle label
+                    if (newText[pointIndex] === '' || !newText[pointIndex]) {
+                        // Show label from customdata
+                        newText[pointIndex] = point.customdata;
+                    } else {
+                        // Hide label
+                        newText[pointIndex] = '';
+                    }
+
+                    // Update the plot
+                    Plotly.restyle(plotDiv, {'text': [newText]}, traceIndex);
+                });
+            }
+        }, 100);
+        </script>
+        </body>
+        """
+
+        html_string = html_string.replace('</body>', toggle_script)
+
+        with open(html_path, 'w') as f:
+            f.write(html_string)
+    else:
+        fig.write_html(
+            html_path,
+            include_plotlyjs='cdn',
+            full_html=True,
+            config={
+                'displayModeBar': True,
+                'displaylogo': False,
+                'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
+            }
+        )
+
     print(f"Saved interactive chart to {html_path}")
 
     # Save static PNG
